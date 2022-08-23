@@ -9,9 +9,9 @@ import java.awt.event.KeyListener
 import javax.swing.JFrame
 import kotlin.concurrent.thread
 import game.engine.manager.SettingsManager
+import game.engine.utils.Pos
 import java.awt.Color
 import java.awt.image.BufferedImage
-import kotlin.math.abs
 
 class Window: JFrame(), KeyListener  {
 
@@ -28,7 +28,7 @@ class Window: JFrame(), KeyListener  {
         settings = SettingsManager.getFromFile()
         LevelsManager.getLevels()
         level = LevelsManager.levels[levelNum]
-        player = Player(level.getStart().x * level.getBrickWidth(), level.getStart().y * level.getBrickHeight(), settings.getSpeed())
+        player = Player(level.getStart().x * level.getBrickWidth(), level.getStart().y * level.getBrickHeight())
         image = Image(settings.getWidth(), settings.getHeight())
         renderedImage = image.render(level)
         name = "blind"
@@ -66,7 +66,7 @@ class Window: JFrame(), KeyListener  {
     fun renderPlayer(g: Graphics) {
         g.color = Color.WHITE
 
-        g.fillRect(player.getX(), player.getY(), playerSize, playerSize)
+        g.fillRect(player.getX(), player.getY(), 1, 1)
     }
 
     fun startInput() = thread {
@@ -76,39 +76,30 @@ class Window: JFrame(), KeyListener  {
                 when (it) {
                     //UP
                     87 -> {
-                        if (player.getY() - 1*settings.getSpeed() > 0 && Color(renderedImage.getRGB(player.getX(), player.getY() - 1*settings.getSpeed())) != Color.RED) {
-                            player.moveUp()
-                        } else if (Color(renderedImage.getRGB(player.getX(), player.getY() - 1*settings.getSpeed())) == Color.RED) {
-                            if (Color(renderedImage.getRGB(player.getX(), player.getY() - 2)) != Color.RED) {
-                                player.moveUp(1)
-                            }
-                        }
-                        else {
-                            player.moveUp(player.getY())
+                        val futurePos = Pos(player.getX(), player.getY() - settings.getSpeed())
+                        if(validateMove(futurePos)) {
+                            player.move(futurePos)
                         }
                     }
                     //DOWN
                     83 -> {
-                        if (player.getY() + 1*settings.getSpeed() < settings.getHeight()) {
-                            player.moveDown()
-                        }else {
-                            player.moveDown(abs(settings.getHeight() - player.getY() - playerSize))
+                        val futurePos = Pos(player.getX(), player.getY() + settings.getSpeed())
+                        if(validateMove(futurePos)) {
+                            player.move(futurePos)
                         }
                     }
                     //LEFT
                     65 -> {
-                        if (player.getX() - 1*settings.getSpeed() > 0) {
-                            player.moveLeft()
-                        } else {
-                            player.moveLeft(player.getX())
+                        val futurePos = Pos(player.getX() - settings.getSpeed(), player.getY())
+                        if(validateMove(futurePos)) {
+                            player.move(futurePos)
                         }
                     }
                     //RIGHT
                     68 -> {
-                        if (player.getX() + 1*settings.getSpeed() < settings.getWidth()) {
-                            player.moveRight()
-                        } else {
-                            player.moveRight(abs(settings.getWidth() - player.getX() - playerSize))
+                        val futurePos = Pos(player.getX() + settings.getSpeed(), player.getY())
+                        if(validateMove(futurePos)) {
+                            player.move(futurePos)
                         }
                     }
                     //EXIT
@@ -123,6 +114,15 @@ class Window: JFrame(), KeyListener  {
             }
         }
 
+    }
+
+    fun validateMove(futurePos: Pos): Boolean {
+        if(futurePos.y in 0 until (settings.getHeight() - playerSize)
+            && futurePos.x in 0 until (settings.getWidth() - playerSize)
+            && Color(renderedImage.getRGB(futurePos.x , futurePos.y ) )!= Color.RED) {
+            return true
+        }
+        return false
     }
 
     override fun keyTyped(e: KeyEvent?) {
